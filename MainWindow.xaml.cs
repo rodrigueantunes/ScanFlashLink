@@ -4,20 +4,19 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using SharpHook;
-using SharpHook.Native;
+using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace ScanFlashLink
 {
     public partial class MainWindow : Window
     {
         private TcpListener _server;
-        private EventSimulator _simulator;
 
         public MainWindow()
         {
             InitializeComponent();
-            _simulator = new EventSimulator();
+            txtIpDisplay.Text = GetLocalIPAddress();
             StartServer();
         }
 
@@ -27,7 +26,7 @@ namespace ScanFlashLink
             {
                 _server = new TcpListener(IPAddress.Any, 12345);
                 _server.Start();
-                AppendLog("Serveur démarré. En attente de connexions...");
+                AppendLog($"Serveur démarré sur {txtIpDisplay.Text}:12345. En attente de connexions...");
 
                 while (true)
                 {
@@ -45,17 +44,16 @@ namespace ScanFlashLink
         {
             try
             {
-                NetworkStream stream = client.GetStream();
+                using NetworkStream stream = client.GetStream();
                 byte[] buffer = new byte[1024];
                 int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                 string receivedCode = Encoding.UTF8.GetString(buffer, 0, bytesRead).Trim();
 
-                AppendLog($"Code reçu : {receivedCode}");
+                // Ajouter dans txtLogs exactement comme reçu
+                Dispatcher.Invoke(() => AppendLog(receivedCode));
 
-                // Simuler la saisie clavier avec SharpHook
-                SimulateKeystrokes(receivedCode);
-
-                client.Close();
+                // Simuler la saisie clavier avec le texte EXACTEMENT comme affiché
+                Dispatcher.Invoke(() => CopyPasteToActiveWindow(receivedCode));
             }
             catch (Exception ex)
             {
@@ -63,114 +61,66 @@ namespace ScanFlashLink
             }
         }
 
-        private void SimulateKeystrokes(string text)
+        private void CopyPasteToActiveWindow(string text)
         {
             Task.Run(() =>
             {
-                foreach (char c in text)
-                {
-                    SimulateKeyPress(c);
-                }
+                // Copier dans le presse-papiers depuis le thread principal
+                Dispatcher.Invoke(() => Clipboard.SetText(text));
 
-                // Simuler la touche "Entrée" après le texte
-                _simulator.SimulateKeyPress(KeyCode.VcEnter);
+                // Attendre un court instant pour éviter les erreurs
+                Thread.Sleep(100);
+
+                // Simuler Ctrl+V (coller le texte dans la fenêtre active)
+                SimulateKeyPress(KeyCode.LeftControl, KeyCode.V);
+                Thread.Sleep(100);
+
+                // Ajouter "Entrée" après la saisie
+                SimulateKeyPress(KeyCode.Enter);
             });
         }
 
-        private void SimulateKeyPress(char key)
+        private static void SimulateKeyPress(params KeyCode[] keys)
         {
-            KeyCode keyCode = ConvertCharToKeyCode(key);
-            if (keyCode != KeyCode.VcUndefined)
+            foreach (var key in keys)
             {
-                _simulator.SimulateKeyPress(keyCode);
+                keybd_event((byte)key, 0, 0, 0); // Appuie sur la touche
+            }
+
+            foreach (var key in keys)
+            {
+                keybd_event((byte)key, 0, 2, 0); // Relâchement de la touche
             }
         }
 
-        private KeyCode ConvertCharToKeyCode(char key)
+        private static string GetLocalIPAddress()
         {
-            return key switch
+            try
             {
-                '0' => KeyCode.Vc0,
-                '1' => KeyCode.Vc1,
-                '2' => KeyCode.Vc2,
-                '3' => KeyCode.Vc3,
-                '4' => KeyCode.Vc4,
-                '5' => KeyCode.Vc5,
-                '6' => KeyCode.Vc6,
-                '7' => KeyCode.Vc7,
-                '8' => KeyCode.Vc8,
-                '9' => KeyCode.Vc9,
-
-                'a' => KeyCode.VcA,
-                'b' => KeyCode.VcB,
-                'c' => KeyCode.VcC,
-                'd' => KeyCode.VcD,
-                'e' => KeyCode.VcE,
-                'f' => KeyCode.VcF,
-                'g' => KeyCode.VcG,
-                'h' => KeyCode.VcH,
-                'i' => KeyCode.VcI,
-                'j' => KeyCode.VcJ,
-                'k' => KeyCode.VcK,
-                'l' => KeyCode.VcL,
-                'm' => KeyCode.VcM,
-                'n' => KeyCode.VcN,
-                'o' => KeyCode.VcO,
-                'p' => KeyCode.VcP,
-                'q' => KeyCode.VcQ,
-                'r' => KeyCode.VcR,
-                's' => KeyCode.VcS,
-                't' => KeyCode.VcT,
-                'u' => KeyCode.VcU,
-                'v' => KeyCode.VcV,
-                'w' => KeyCode.VcW,
-                'x' => KeyCode.VcX,
-                'y' => KeyCode.VcY,
-                'z' => KeyCode.VcZ,
-
-                'A' => KeyCode.VcA,
-                'B' => KeyCode.VcB,
-                'C' => KeyCode.VcC,
-                'D' => KeyCode.VcD,
-                'E' => KeyCode.VcE,
-                'F' => KeyCode.VcF,
-                'G' => KeyCode.VcG,
-                'H' => KeyCode.VcH,
-                'I' => KeyCode.VcI,
-                'J' => KeyCode.VcJ,
-                'K' => KeyCode.VcK,
-                'L' => KeyCode.VcL,
-                'M' => KeyCode.VcM,
-                'N' => KeyCode.VcN,
-                'O' => KeyCode.VcO,
-                'P' => KeyCode.VcP,
-                'Q' => KeyCode.VcQ,
-                'R' => KeyCode.VcR,
-                'S' => KeyCode.VcS,
-                'T' => KeyCode.VcT,
-                'U' => KeyCode.VcU,
-                'V' => KeyCode.VcV,
-                'W' => KeyCode.VcW,
-                'X' => KeyCode.VcX,
-                'Y' => KeyCode.VcY,
-                'Z' => KeyCode.VcZ,
-
-                '-' => KeyCode.VcMinus,
-                '=' => KeyCode.VcEquals,
-                ' ' => KeyCode.VcSpace,
-                '.' => KeyCode.VcPeriod,
-                ',' => KeyCode.VcComma,
-                '/' => KeyCode.VcSlash,
-                '\\' => KeyCode.VcBackslash,
-                ';' => KeyCode.VcSemicolon,
-
-                _ => KeyCode.VcUndefined,
-            };
+                using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
+                socket.Connect("8.8.8.8", 65530);
+                return (socket.LocalEndPoint as IPEndPoint)?.Address.ToString() ?? "Non disponible";
+            }
+            catch
+            {
+                return "Non disponible";
+            }
         }
 
         private void AppendLog(string message)
         {
             Dispatcher.Invoke(() => txtLogs.AppendText($"{message}\n"));
+        }
+
+        // Simuler un appui clavier bas niveau
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, uint dwExtraInfo);
+
+        private enum KeyCode : byte
+        {
+            Enter = 0x0D,
+            LeftControl = 0xA2,
+            V = 0x56
         }
     }
 }

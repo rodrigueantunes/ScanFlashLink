@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "PqO8LZk+jHQ=",
+  "success": true,
+  "projectFilePath": "C:\\Application\\ScanFlashLink\\ScanFlashLink.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Antunes Rodrigue\\.nuget\\packages\\sharphook\\5.3.8\\sharphook.5.3.8.nupkg.sha512"
+  ],
+  "logs": []
+}
