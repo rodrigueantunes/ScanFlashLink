@@ -32,7 +32,7 @@ Voici la version mise à jour du **README.md** avec le lien vers l'APK Android. 
 
 ### **🔹 Cloner le projet**
 ```sh
-git clone https://github.com/ton-utilisateur/ScanFlashLink.git
+git clone https://github.com/rodrigueantunes/ScanFlashLink.git
 cd ScanFlashLink
 ```
 
